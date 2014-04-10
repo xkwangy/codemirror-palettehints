@@ -1,0 +1,23 @@
+{
+  "name": "codemirror-palettehints",
+  "version": "0.0.0",
+  "description": "a codemirror plugin that adds color hints to text",
+  "main": "index.js",
+  "scripts": {
+    "test": "tape test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:mapbox/codemirror-palettehints.git"
+  },
+  "keywords": [
+    "codemirror",
+    "palette"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mapbox/codemirror-palettehints/issues"
+  },
+  "homepage": "https://github.com/mapbox/codemirror-palettehints"
+}
