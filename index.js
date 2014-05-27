@@ -20,86 +20,68 @@ function clear(mark) {
     return mark.clear();
 }
 
-function findMarks(editor, range) {
-    var markers = [];
-    var from = range.from;
-    var to = range.to;
-    var firstLine = from.line;
-    var lastLine = to.line;
-    var lineNumber = from.line;
-    while (lineNumber <= lastLine) {
-        var line = editor.getLineHandle(lineNumber);
-        var spans = line && line.markedSpans;
-        if (spans) {
-            var isLastLine = lineNumber === lastLine;
-            var isFirstLine = lineNumber === firstLine;
-
-            var count = spans.length;
-            var index = 0;
-            while (index < count) {
-                var span = spans[index];
-                var isInRange = isFirstLine ? span.from >= from.ch :
-                    isLastLine ? span.to <= to.ch :
-                    true;
-
-                if (isInRange)
-                    markers.push(span.marker.parent || span.marker);
-
-                index = index + 1;
-            }
-        }
-        lineNumber = lineNumber + 1;
-    }
-
-    return markers;
-}
-
 function updatePaletteWidgets(editor, range) {
     var doc = editor.getDoc();
-    findMarks(editor, range).filter(isPaletteMark).forEach(clear);
 
-    var isFirstLine = true;
+    doc.findMarks({
+        line:range.from.line,
+        ch:0
+    }, {
+        line:range.to.line + 1,
+        ch:0
+    }).filter(isPaletteMark).forEach(clear);
+
     editor.eachLine(range.from.line, range.to.line + 1, function (line) {
+
         var text = line.text;
         var match = null;
         var offset = 0;
+
         while ((match = text.match(COLOR_PATTERN))) {
             var color = match[0];
-            var start = text.indexOf(color);
+            var start = match.index;
             var index = start + color.length + 1;
-            var before = text[start - 2];
-            var after = text[index];
+            var before = text[start - 1];
+            var after = text[index - 1];
             offset = offset + index;
             text = text.substr(index);
 
             if ((!after || ',; )}'.indexOf(after) >= 0) &&
                 (!before || '{(,: '.indexOf(before)) >= 0) {
 
-                if (!isFirstLine || offset >= range.from.ch) {
-                    var bookmark = doc.setBookmark({
-                        line: doc.getLineNumber(line),
-                        // place palettes at end of line to avoid cursor issues.
-                        // ch: offset
-                    }, {
-                        widget: makeWidget(color),
-                        insertLeft: true
-                    });
-                    bookmark.isPaletteMark = true;
-                }
+                var bookmark = doc.setBookmark({
+                    line: doc.getLineNumber(line),
+                    ch: offset - (color.length + 1)
+                }, {
+                    widget: makeWidget(color),
+                    insertLeft: true
+                });
+                bookmark.isPaletteMark = true;
             }
         }
-        isFirstLine = false;
     });
 }
 
+
 function batchUpdate(editor, change) {
+
     while (change) {
-        updatePaletteWidgets(editor, change);
+        updatePaletteWidgets(editor, {
+            from: {
+                line: change.from.line,
+                ch: 0
+            },
+            to: {
+                line: change.to.line + (change.text.length - 1),
+                ch: 0
+            }
+        });
         change = change.next;
     }
+
 }
 
-module.exports = function(editor, current, past) {
+module.exports = function(editor, current) {
     if (current) {
         editor.on('change', batchUpdate);
         updatePaletteWidgets(editor, {
